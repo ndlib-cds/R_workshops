@@ -1,0 +1,187 @@
+---
+title: "R 101"
+author: "James Ng, PhD <james.ng@nd.edu>"
+date: "Navari Family Center for Digital Scholarship, University of Notre Dame"
+output:
+  pdf_document: default
+  html_notebook:
+    df_print: paged
+  html_document:
+    df_print: paged
+---
+
+### You can use RStudio in the cloud! 
+#### Sign up with google or github account at <a href="https://rstudio.cloud">rstudio.cloud</a>.
+
+```{r}
+suppressMessages(library(tidyverse))
+## you may need to install tidyverse first:
+# install.packages('tidyverse')
+rm(list=ls())
+setwd('/Users/jng2/Dropbox/Work/Library/CDS/R-RStudio/demo1hr')
+```
+
+### R has many baked-in example datasets. Let's load one of them.
+
+```{r}
+datauto <- data.frame(mpg)
+```
+
+### Get file dimensions and store them in new objects.
+
+```{r}
+dim(datauto)
+
+n.obs <- dim(datauto)[1]
+n.cols <- dim(datauto)[2]
+```
+
+### Get a sense of the data.
+
+```{r echo = T, results = 'hide'}
+# get glimpse of data
+str(datauto)
+glimpse(datauto)
+```
+
+```{r echo = T, results = 'hide'}
+# return first few rows
+head(datauto)
+```
+
+```{r echo = T, results = 'hide'}
+# get basic summary stats
+summary(datauto)
+```
+
+### The variable class is categorical so let's factorize it. Summary() is now more useful when applied to a factor.
+```{r}
+datauto$f.class <- as.factor(datauto$class)
+summary(datauto$f.class)
+```
+
+### Sort data by city mpg
+
+```{r echo = T, results = 'hide'}
+# ascending order
+arrange(datauto, cty)
+```
+
+```{r echo = T, results = 'hide'}
+# descendng order
+arrange(datauto, desc(cty))
+```
+
+### Sort by manufacturer, model and year, and commit to memory.
+
+```{r echo = T, results = 'hide'}
+datauto <- arrange(datauto, manufacturer, model, year)
+datauto
+```
+
+### Give me the names of all the manufacturers 
+
+```{r}
+unique( datauto[, 'manufacturer'] )
+
+# equivalently: 
+# unique( datauto$manufacturer )
+```
+
+### How many models per year did each manufacturer have? 
+
+```{r echo = T, results = 'hide'}
+datauto %>% 
+  group_by(manufacturer, year) %>% 
+  summarize( n.models = n_distinct(model) )
+```
+
+### Keep only the manufacturers with just one model.
+
+```{r echo = T, results = 'hide'}
+
+datauto %>% 
+  group_by(manufacturer, year) %>% 
+  filter( n_distinct(model) == 1 )
+
+```
+
+### Count number of vehicles by class per year and plot it
+
+```{r}
+classcounts <- datauto %>% group_by(f.class, year) %>% summarize(n = n())
+
+ggplot(dat=classcounts, aes(y=n, x=f.class, fill=as.factor(year))) + 
+  geom_bar(stat="identity")
+```
+
+
+### Compute mean cty, mean hwy and number of vehicles by class 
+
+```{r}
+datauto.means <- datauto %>% 
+  group_by(f.class) %>% 
+  summarize(mean.cty = mean(cty), mean.hwy = mean(hwy), n = n() )
+
+datauto.means
+```
+
+### To produce this scatter plot.
+
+```{r}
+library(ggrepel)
+plot1 <- ggplot(data=datauto.means, aes(x = mean.hwy, y = mean.cty)) +
+  geom_point() +
+  geom_text_repel(aes(label=f.class))
+
+plot1
+```
+
+### Vary point color by mean displacement.
+
+```{r}
+plot1 <- plot1 + geom_point(aes(size=n))
+
+plot1
+```
+
+### Find correlation between average combined cty and hwy mpg in 1999 vs 2008.
+### To do this, need to 'spread' (reshape) the data.
+
+```{r echo = T, results = 'hide'}
+# first get average combined cty and hwy, call it mpg
+datauto %>% mutate( mpg = (cty+hwy)/2 )
+```
+
+```{r echo = T, results = 'hide'}
+# then summarize by manufacturer, model, year
+tempdat <- datauto %>% mutate(mpg = (cty+hwy)/2) %>%
+  group_by(manufacturer, model, year) %>%
+  summarize( mpg=mean(mpg) )
+
+tempdat
+```
+
+```{r echo = T, results = 'hide'}
+# spread mpg into mpg_1999 and mpg_2008
+tempdat %>% spread( key=year, value=mpg)
+```
+
+```{r echo = T, results = 'hide'}
+# finally, rename 1999 and 2008 columns
+dat.mpg.wide <- tempdat %>% spread( key=year, value=mpg) %>%
+  rename( mpg_1999 = `1999`, mpg_2008 = `2008` )
+dat.mpg.wide
+```
+
+### What's the relationship between fuel economy in 1999 and fuel economy in 2008?
+
+```{r}
+modl <- lm(formula = mpg_2008 ~ mpg_1999, data=dat.mpg.wide)
+
+summary(modl)
+```
+
+### Want to learn more? Two great resources:
+#### <a href="http://r4ds.had.co.nz/">R for Data Science</a> by Hadley Wickham
+#### <a href="https://swcarpentry.github.io/r-novice-inflammation/">Programming with R</a> by Software Carpentry
