@@ -10,25 +10,80 @@ output:
   pdf_document: default
 ---
 
-### You can use RStudio in the cloud! 
-#### Sign up with google or github account at <a href="https://rstudio.cloud">rstudio.cloud</a>.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "G:\\My Drive\\Teaching\\Datasets")
 
-```{r}
+
+```
+
+## The Basics of using R
+
+First, you should download and install R (https://cran.rstudio.com/) and RStudio (https://rstudio.com/products/rstudio/download/) if you have not done so yet. Both should work on any of the major opperating systems and be fairly easy to install
+
+If it absolutly does not work, you can use RStudio in the cloud! 
+Sign up with google or github account at <a href="https://rstudio.cloud">rstudio.cloud</a>.
+
+Once the software is all set up, you should run RStudio. 
+
+The first thing we will want to do is load the tidyverse package. This brings in a lot of the newer ways of manipulating data in R. all external libraries (called packages) are brought in with the *library()* command. If you have never installed it, you will need to run *install.packages("tidyverse")* first.
+
+```{r tidyload}
 library(tidyverse)
 ## you may need to install tidyverse first:
 # install.packages('tidyverse')
-rm(list=ls())
-# setwd('/Users/jng2/Dropbox/Work/Library/CDS/R-RStudio/demo1hr')
 ```
 
-### R has many baked-in example datasets. Let's load one of them. This is Fuel economy data from 1999 and 2008 for 38 popular models of car.
+Then we will want to clear out any existing data and set our working directory for any files we want to load or save. Note: your WD will be different and on windows computers you should use two backslashes between parts of the location
+```{r wd}
+rm(list=ls())
+setwd("G:\\My Drive\\Teaching\\Datasets")
+```
+
+
+
+Then you are ready to load some data 
+
+### Part 1: Loading Data
+
+R has many baked-in example datasets. You can see a list of what is available in your version of R by running the command *data()* in your console
+
+
+Let's load one of these datasets, mpg. This is Fuel economy data from 1999 and 2008 for 38 popular models of car.
 More info: https://ggplot2.tidyverse.org/reference/mpg.html
 
-```{r}
-datauto <- data.frame(mpg)
+```{r mpgLoad}
+datauto <- mpg
+```
+Here, we have taken the built-in mpg dataset and made a copy of it into a local object called *datauto*. The arrow <- is how we assign values in R. An = also works in most cases. We can assign other variables the same way
+
+```{r other variables}
+twice <- 2
+animal <- "goat"
+moods <- c("happy", "sad", "indifferent")
+```
+The c() syntax is how R knows something is a list of values
+
+Alternatively, you can load many other file types directly into R. The newer way of doing this is with the readr package (which comes as part of the tidyverse).
+you can read comma-separated values (csv) files with read_csv
+```{r readexternal}
+census.data <- read_csv("State_ACS2016.csv")
 ```
 
-### Get file dimensions and store them in new objects.
+Alternatively, you import excel files directly with read_exel, though you need to import the *readxl* package and specify the sheet.
+```{r readxl}
+library(readxl)
+prisons <-  read_excel("US_Prisons.xls", sheet="US_Prisons")
+
+```
+
+In the Environment section of RStudio you can see the differences between values and the data we loaded. The datauto object is a data frame, which is the R version of a table. A datafame has a series of observations (rows) and variables (columns)
+
+#2. Summarizing Data
+There are a number of different ways of getting a sense of your data in R. Here are a few of them
+
+
+To get the data frame dimensions and store them in new objects.
 
 ```{r}
 dim(datauto)
@@ -36,48 +91,62 @@ n.obs <- dim(datauto)[1]
 n.cols <- dim(datauto)[2]
 ```
 
-### Get a sense of the data.
+To get a sense of the data use *glimpse()*.
 
 ```{r echo = T, results = 'hide'}
-# get glimpse of data
-str(datauto)
 glimpse(datauto)
 ```
+To return first few rows use *head()*
 
 ```{r echo = T, results = 'hide'}
-# return first few rows
+
 head(datauto)
 ```
-
+To get basic summary stats use *summary()*
 ```{r echo = T, results = 'hide'}
-# get basic summary stats
+
 summary(datauto)
 ```
 
-### The variable class is categorical so let's factorize it. Summary() is now more useful when applied to a factor.
+We can reference individual rows, colums and records within the data frame.
+To reference an individual column use the name of the dataframe $ and the name of the column
+```{r inside}
+mean(datauto$cty)
+
+```
+You can also reference columns or rows by number or name within brackets. The row number/name comes first, followed by a comma, then the column number/name. If you are referencing 
+```{r inside2}
+print(datauto[4,"trans"])
+datauto[4,]
+max(datauto[,c("hwy","cty")])
+```
+
+##3. Manipulating Data
+
+The command *unique()* will give all of the possible values
+
+```{r}
+unique( datauto[, 'manufacturer'] )
+# equivalently: 
+# unique( datauto$manufacturer )
+```
+
+Reassigning columns is done the same way variables are assigned.
+Here, the variable *class* is categorical so let's factorize it. This basically makes it so there is not as much repetative text stored in the file and analyses run faster.
+Summary() is now more useful when applied to a factor.
 ```{r}
 datauto$f.class <- as.factor(datauto$class)
 summary(datauto$f.class)
 ```
 
-## Sort data by city mpg
-
-```{r echo = T, results = 'hide'}
-# ascending order
-arrange(datauto, cty)
-```
-
-```{r echo = T, results = 'hide'}
-# descendng order
-arrange(datauto, desc(cty))
-```
-
-## Sort by manufacturer, model and year, and commit to memory.
-
+We can also sort and arrange our data off of any field. Here we sort by manufacturer, model and year.
 ```{r echo = T, results = 'hide'}
 datauto <- arrange(datauto, manufacturer, model, year)
 ```
 
+
+
+###ABANDON ALL HOPE
 ### Give me the names of all the manufacturers 
 
 ```{r}
