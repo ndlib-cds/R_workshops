@@ -1,5 +1,5 @@
 ---
-title:  "Intro to R"
+title:  "Introduction to R (with a tidyverse focus)"
 author: "Matthew Sisk <msisk1@nd.edu> & James Ng, PhD <james.ng@nd.edu>"
 date:   "Navari Family Center for Digital Scholarship, University of Notre Dame"
 output:
@@ -12,7 +12,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "G:\\My Drive\\Teaching\\Datasets")
+knitr::opts_knit$set(root.dir = "/home/matthew/Documents")
 
 
 ```
@@ -37,7 +37,7 @@ library(tidyverse)
 Then we will want to clear out any existing data and set our working directory for any files we want to load or save. Note: your WD will be different and on windows computers you should use two backslashes between parts of the location
 ```{r wd}
 rm(list=ls())
-setwd("G:\\My Drive\\Teaching\\Datasets")
+# setwd("G:\\My Drive\\Teaching\\Datasets")
 ```
 
 
@@ -51,9 +51,10 @@ R has many baked-in example datasets. You can see a list of what is available in
 
 Let's load one of these datasets, mpg. This is Fuel economy data from 1999 and 2008 for 38 popular models of car.
 More info: https://ggplot2.tidyverse.org/reference/mpg.html
+Here, we assign the data as a *data.frame()* for ease. It is a tibble, which is the next iteration of data in R, but the support in RSudio is not yet as good for tibbles
 
 ```{r mpgLoad}
-datauto <- mpg
+datauto <- data.frame(mpg)
 ```
 Here, we have taken the built-in mpg dataset and made a copy of it into a local object called *datauto*. The arrow <- is how we assign values in R. An = also works in most cases. We can assign other variables the same way
 
@@ -146,41 +147,34 @@ datauto <- arrange(datauto, manufacturer, model, year)
 
 
 
-###ABANDON ALL HOPE
-### Give me the names of all the manufacturers 
-
-```{r}
-unique( datauto[, 'manufacturer'] )
-# equivalently: 
-# unique( datauto$manufacturer )
+One of the newest innovations in R is the tidyverse, which relys on pipes (the %>% symbol) to string together multiple commands. This is part of the dplyr package (which comes with the *library(tidyverse)* command earlier)
+So here, if we want to know how many models each manufactor, we first specify the data, then pipe that data to the group_by() command and then pipe that result to the summarize() command which creates a new variable *n.models* by counting the number of distinct values in the model column
+```{r echo = T, results = 'hide'}
+datauto %>% 
+  group_by(manufacturer) %>% 
+  summarize( n.models = n_distinct(model) )
 ```
 
-### How many models per year did each manufacturer have? 
-
+We can even group_by multiple columns
 ```{r echo = T, results = 'hide'}
 datauto %>% 
   group_by(manufacturer, year) %>% 
   summarize( n.models = n_distinct(model) )
 ```
 
-### Keep only the manufacturers with just one model.
-
+Filter() does something similar, but makes a new data frame with only those manufactors with on model retained
 ```{r echo = T, results = 'hide'}
 datauto %>% 
   group_by(manufacturer, year) %>% 
   filter( n_distinct(model) == 1 )
 ```
 
-### Count number of vehicles by class per year and plot it
-
+The results of these sorts of dplyr manipulations can be saved as new data frames for further use later, like here with the number of each class of vehical produced each year.
 ```{r}
 classcounts <- datauto %>% group_by(f.class, year) %>% summarize(n = n())
-ggplot(dat=classcounts, aes(y=n, x=f.class, fill=as.factor(year))) + 
-  geom_bar(stat="identity")
 ```
 
-
-### Compute mean cty, mean hwy and number of vehicles by class 
+or computing mean cty, mean hwy and number of vehicles by class 
 
 ```{r}
 datauto.means <- datauto %>% 
@@ -188,26 +182,39 @@ datauto.means <- datauto %>%
   summarize(mean.cty = mean(cty), mean.hwy = mean(hwy), n = n() )
 datauto.means
 ```
+#4 Plotting Data
 
-### To produce this scatter plot.
+The main plotting engine for the tidyverse is a library called ggplot. It also builds thing incrimentally, but instead of a pipe, it uses a plus sign to string together the components of the plot. Basic syntax for a ggplot is to define a ggplot entity with ggplot(), define the data you areusing, and then use the aes() to assign the x and y axes, and if color or shape mean anything. The type of chart is then added on with a *geom_** function. Here we are using a geom_bar() with the stat of identity (the count of values)
+```{r}
+ggplot(dat=classcounts, aes(y=n, x=f.class, fill=as.factor(year))) + 
+  geom_bar(stat="identity")
+```
+
+You can also assign a ggplot item to a variable. This will allow you to incrimentally add things onto it.
 
 ```{r}
-library(ggrepel)
 plot1 <- ggplot(data=datauto.means, aes(x = mean.hwy, y = mean.cty)) +
-  geom_point() +
-  geom_text_repel(aes(label=f.class))
+  geom_point()+
+  geom_text(aes(label=f.class),hjust=-.1, vjust=0)
 plot1
 ```
 
-### Vary point color by mean displacement.
+Vary point size by number
 
 ```{r}
 plot1 <- plot1 + geom_point(aes(size=n))
 plot1
 ```
+Change the labels
+```{r}
+plot1 <- plot1 + xlab("Mean Highway MPG" ) +
+  ylab("Mean City MPG")
+plot1
+```
 
-### Find correlation between average combined cty and hwy mpg in 1999 vs 2008.
-### To do this, need to 'spread' (reshape) the data.
+#5. Analysis
+Find correlation between average combined cty and hwy mpg in 1999 vs 2008.
+To do this, need to 'spread' (reshape) the data.
 
 ```{r echo = T, results = 'hide'}
 # first get average combined cty and hwy, call it mpg
@@ -234,7 +241,7 @@ dat.mpg.wide <- tempdat %>% spread( key=year, value=mpg) %>%
 dat.mpg.wide
 ```
 
-### What's the relationship between fuel economy in 1999 and fuel economy in 2008?
+Linear Model: What's the relationship between fuel economy in 1999 and fuel economy in 2008?
 
 ```{r}
 modl <- lm(formula = mpg_2008 ~ mpg_1999, data=dat.mpg.wide)
